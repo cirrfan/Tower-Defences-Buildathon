@@ -1,0 +1,1164 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pirate Slime Defense</title>
+<link href="https://fonts.googleapis.com/css2?family=Pirata+One&family=Chelsea+Market&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/phaser@3.87.0/dist/phaser.min.js"></script>
+<style>
+  :root{
+    --sea:#0b2545;
+    --sea-dark:#081b33;
+    --wave:#1d4e7a;
+    --blood:#a4161a;
+    --blood-bright:#d62828;
+    --gold:#e0a82e;
+    --gold-bright:#ffd166;
+    --sand:#e9d8a6;
+    --wood:#6f4518;
+    --wood-dark:#4a2e0e;
+    --panel:#13294b;
+    --panel-dark:#0d1f3a;
+    --cream:#fdf3d8;
+    --danger:#ef233c;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{
+    font-family:'Chelsea Market','Trebuchet MS',sans-serif;
+    color:var(--cream);
+    background:
+      radial-gradient(1200px 500px at 50% -100px, rgba(214,40,40,.28), transparent),
+      repeating-linear-gradient(0deg, rgba(255,255,255,.015) 0 3px, transparent 3px 9px),
+      linear-gradient(180deg,#0b2545,#081b33 60%,#061527);
+    min-height:100vh;
+    display:flex;flex-direction:column;align-items:center;
+    padding:10px 12px 20px;
+  }
+  header{width:100%;max-width:1000px;text-align:center;margin-bottom:8px}
+  header h1{
+    font-family:'Pirata One','Chelsea Market',cursive;
+    font-size:clamp(26px,4vw,42px);
+    color:var(--gold-bright);
+    letter-spacing:2px;
+    text-shadow:0 3px 0 var(--blood), 0 6px 16px rgba(0,0,0,.6);
+  }
+  header p{font-size:13px;color:#c9b06a;letter-spacing:.5px;margin-top:2px}
+
+  section{
+    width:100%;max-width:1000px;
+    background:linear-gradient(180deg,var(--panel),var(--panel-dark));
+    border:3px solid var(--wood);
+    border-radius:14px;
+    box-shadow:0 0 0 2px rgba(224,168,46,.25), 0 8px 20px rgba(0,0,0,.5), inset 0 1px 0 rgba(255,255,255,.07);
+    margin-bottom:10px;
+    padding:10px 14px 12px;
+  }
+  h2{
+    font-family:'Pirata One','Chelsea Market',cursive;
+    font-size:19px;color:var(--gold);letter-spacing:1.5px;
+    margin-bottom:8px;
+    display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;
+  }
+  h2 .sub{font-family:'Chelsea Market';font-size:11.5px;color:#e8d9ac;text-transform:none;letter-spacing:.3px}
+
+  .canvas-wrap{
+    border:3px solid var(--wood-dark);border-radius:10px;overflow:hidden;
+    box-shadow:inset 0 0 30px rgba(0,0,0,.5);
+    background:var(--sea);
+    line-height:0;
+    position:relative;
+  }
+  #game-container{width:100%}
+  .zoom-row{display:flex;gap:6px;align-items:center;margin-left:auto}
+  .zbtn{
+    font-family:'Pirata One';font-size:16px;
+    background:linear-gradient(180deg,var(--gold-bright),var(--gold));
+    color:#4a2e0e;border:2px solid #8a6210;border-radius:8px;
+    padding:4px 12px;cursor:pointer;
+    box-shadow:0 3px 0 #6e4d0a;
+  }
+  .zbtn:active{transform:translateY(2px);box-shadow:none}
+  #zoomLabel{font-family:'Chelsea Market';font-size:12px;color:var(--cream);min-width:44px;text-align:center}
+
+  /* ---------- Tower control ---------- */
+  .cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:8px}
+  .card{
+    background:linear-gradient(180deg,rgba(214,40,40,.16),rgba(0,0,0,.42));
+    border:2px solid var(--wood-dark);border-radius:10px;padding:8px 10px;
+    display:flex;flex-direction:column;gap:5px;
+    transition:transform .1s;
+  }
+  .card.armed{outline:3px solid var(--gold-bright);transform:scale(1.02)}
+  .card .row1{display:flex;align-items:center;gap:8px}
+  .card .ticon{font-size:26px;filter:drop-shadow(0 2px 2px rgba(0,0,0,.4))}
+  .card .tname{font-family:'Pirata One';font-size:16px;color:var(--gold-bright);letter-spacing:.5px}
+  .card .tcost{margin-left:auto;font-size:13px;color:var(--gold)}
+  .card .tdesc{font-size:11.5px;color:#e8d9ac;line-height:1.35}
+  .card .stats{font-size:11px;color:#d9b98a;display:flex;gap:10px;flex-wrap:wrap}
+  .card .stats b{color:var(--cream)}
+  .card button{
+    font-family:'Pirata One';font-size:13px;letter-spacing:.5px;
+    background:linear-gradient(180deg,var(--blood-bright),var(--blood));
+    color:var(--cream);border:2px solid #5e0c0e;border-radius:8px;
+    padding:5px 10px;cursor:pointer;box-shadow:0 3px 0 #4a090b;
+  }
+  .card button:active{transform:translateY(2px);box-shadow:none}
+  .card button:disabled{filter:grayscale(.8) brightness(.55);cursor:not-allowed;box-shadow:none}
+  .card .lvl{display:inline-block;background:rgba(0,0,0,.45);border-radius:6px;padding:1px 8px;font-size:11px;color:var(--gold-bright)}
+
+  /* ---------- Wave panel ---------- */
+  .wave-row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+  .wbtn{
+    font-family:'Pirata One';font-size:15px;letter-spacing:.5px;
+    background:linear-gradient(180deg,var(--blood-bright),var(--blood));
+    color:var(--cream);border:2px solid #5e0c0e;border-radius:8px;
+    padding:7px 14px;cursor:pointer;box-shadow:0 3px 0 #4a090b;
+  }
+  .wbtn:active{transform:translateY(2px);box-shadow:none}
+  .wbtn:disabled{filter:grayscale(.8) brightness(.55);cursor:not-allowed;box-shadow:none}
+  .wbtn.gold{background:linear-gradient(180deg,var(--gold-bright),var(--gold));color:#4a2e0e;border-color:#8a6210;box-shadow:0 3px 0 #6e4d0a}
+  .wbtn.active{outline:3px solid var(--gold-bright)}
+  .wave-stats{display:flex;gap:14px;flex-wrap:wrap;font-size:13px}
+  .wave-stats .ws{display:flex;align-items:center;gap:5px}
+  .wave-stats .ws .v{color:var(--gold-bright);font-size:16px}
+  #waveMsg{
+    margin-top:8px;font-size:13px;text-align:center;
+    background:rgba(0,0,0,.35);border-radius:8px;padding:6px 10px;
+    border:1px dashed rgba(224,168,46,.55);color:var(--cream);min-height:32px;
+  }
+  #waveMsg.bad{color:#ff9d9d;border-color:var(--danger)}
+  #waveMsg.good{color:#ffe9a8;border-color:var(--gold)}
+  .legend{display:flex;gap:10px;flex-wrap:wrap;margin-top:7px;font-size:11.5px;color:#e8d9ac}
+  .legend .lg{display:flex;align-items:center;gap:4px;background:rgba(0,0,0,.28);border-radius:6px;padding:3px 8px}
+  .legend .dot{width:10px;height:10px;border-radius:50%;display:inline-block}
+
+  footer{font-size:10.5px;color:#8fa3c4;letter-spacing:.5px}
+</style>
+</head>
+<body>
+
+<header>
+  <h1>☠️ Pirate Slime Defense 🏴‍☠️</h1>
+  <p>Yarr! Guard yer pirate stronghold from elemental slimes — upgrade cannons, unlock powers, send 'em to the depths!</p>
+</header>
+
+<section id="map-section">
+  <h2>
+    Plunder Map
+    <span class="zoom-row">
+      <button class="zbtn" id="zoom-out">➖</button>
+      <span id="zoomLabel">100%</span>
+      <button class="zbtn" id="zoom-in">➕</button>
+    </span>
+  </h2>
+  <div class="canvas-wrap"><div id="game-container"></div></div>
+</section>
+
+<section id="tower-section">
+  <h2>Tower Control <span class="sub">pick a card, click a glowing build spot on the map · click a placed tower to select &amp; upgrade it</span></h2>
+  <div class="cards" id="tower-cards"></div>
+</section>
+
+<section id="wave-section">
+  <h2>Slime Waves <span class="sub">slimes sail toward yer stronghold — fast-forward or skip ahead!</span></h2>
+  <div class="wave-row">
+    <button class="wbtn gold" id="btn-wave">▶ Start Wave 1</button>
+    <button class="wbtn" id="btn-speed">⏩ Fast: Off</button>
+    <button class="wbtn" id="btn-skip">⏭ Skip to Next Wave</button>
+    <button class="wbtn" id="btn-restart">🔄 Restart</button>
+  </div>
+  <div class="wave-stats">
+    <div class="ws">🪙 Gold: <span class="v" id="gold">220</span></div>
+    <div class="ws">❤️ Stronghold HP: <span class="v" id="baseHp">100</span></div>
+    <div class="ws">🌊 Wave: <span class="v" id="wave">0 / 12</span></div>
+    <div class="ws">👾 Slimes: <span class="v" id="foes">0</span></div>
+  </div>
+  <div id="waveMsg">The seas be calm. Place towers, then start Wave 1!</div>
+  <div class="legend">
+    <span class="lg"><span class="dot" style="background:#ff6b35"></span>Fire slime — burns towers over time</span>
+    <span class="lg"><span class="dot" style="background:#7fd8f7"></span>Ice slime — slows tower attacks</span>
+    <span class="lg"><span class="dot" style="background:#a97c50"></span>Earth slime — hits towers hard</span>
+    <span class="lg"><span class="dot" style="background:#c9f26f"></span>Wind slime — leaps past towers</span>
+  </div>
+</section>
+
+<footer>Everything runs in your browser — nothing is saved between visits.</footer>
+
+<script>
+"use strict";
+window.addEventListener('error', e => {
+  const m = document.getElementById('waveMsg');
+  if (m){ m.className='bad'; m.textContent = '⚠ Game error: ' + e.message; }
+});
+</script>
+<script>
+"use strict";
+/* Only use Phaser if available; otherwise show error (needs internet first load) */
+if (typeof Phaser === 'undefined'){
+  document.getElementById('waveMsg').textContent =
+    '⚠ Could not load the game engine (no internet?). Reconnect and refresh.';
+  throw new Error('Phaser failed to load');
+}
+
+/* ============================== CONSTANTS ============================== */
+const W = 960, H = 540;
+const MAX_WAVE = 12;
+
+const WAYPOINTS = [[-40,300],[180,300],[180,150],[420,150],[420,420],[660,420],[660,230],[960,230]];
+const BASE = {x: 892, y: 230};
+
+// Fixed tower spots (col,row on the 960x540 map, spot size 56)
+const SPOTS = [
+  [90,220],[260,220],[260,360],[350,80],[480,240],[480,360],
+  [560,480],[600,300],[730,330],[770,140],[140,140],[350,470]
+].map(([x,y]) => ({x,y,tower:null}));
+
+const TOWERS = {
+  fire: {
+    name:'Bombard', icon:'💣', cost:90, range:120, dmg:16, rate:0.8,
+    color:0x6f4518, pColor:0x2b2b2b,
+    desc:'Lobs cannonballs that splash damage. Strong vs ice slimes.',
+    unlock:{3:'Big Powder — bigger splash', 5:'Broadside — huge damage burst'}
+  },
+  laser: {
+    name:'Crossbow', icon:'🏹', cost:130, range:170, dmg:9, rate:0.28,
+    color:0xb08928, pColor:0xffe08a,
+    desc:'Fires golden bolts rapid-fire. Strong vs wind slimes.',
+    unlock:{3:'Piercing Bolt — skewers 2 slimes', 5:'Overdraw — +80% fire rate'}
+  },
+  chainsaw: {
+    name:'Cutlass Mill', icon:'⚔️', cost:100, range:85, dmg:30, rate:1.0,
+    color:0x8d99ae, pColor:0xeceff1,
+    desc:'Spinning cutlasses shred nearby slimes. Strong vs earth slimes.',
+    unlock:{3:'Rusty Edge — bleeds slimes over time', 5:'Whirlwind — hits all slimes in range'}
+  },
+  mg: {
+    name:'Swivel Gun', icon:'🔫', cost:75, range:140, dmg:5, rate:0.12,
+    color:0x3f4b5a, pColor:0xffd166,
+    desc:'Sprays grapeshot fast at low damage. Strong vs fire slimes.',
+    unlock:{3:'Belt Boy — +50% fire rate', 5:'Twin Barrels — double damage'}
+  }
+};
+const MAX_LVL = 5;
+const UPGRADE_COST = lvl => 60 + lvl*40;   // cost to go to lvl+1
+
+const SLIMES = {
+  fire:  {label:'Fire Slime',  color:0xff6b35, r:14, hpMul:1,    spMul:1,   rwMul:1,   power:'Burns nearby towers over time'},
+  ice:   {label:'Ice Slime',   color:0x7fd8f7, r:13, hpMul:1.15, spMul:.8,  rwMul:1.1, power:'Chills towers — slows their attacks'},
+  earth: {label:'Earth Slime', color:0xa97c50, r:17, hpMul:2.1,  spMul:.6,  rwMul:1.6, power:'Smashes towers with heavy hits'},
+  wind:  {label:'Wind Slime',  color:0xc9f26f, r:12, hpMul:.75,  spMul:1.45,rwMul:.9,  power:'Jumps past towers toward the base'}
+};
+
+/* Malaysia-flavored names for the starting garrison */
+const START_TOWERS = [
+  {spot:4, type:'fire',  name:'Malacca Bombard'},
+  {spot:2, type:'mg',    name:'Kuala Selangor Swivel'},
+  {spot:8, type:'chainsaw', name:'Endau Cutlass Mill'}
+];
+
+/* ============================== DOM ============================== */
+const el = id => document.getElementById(id);
+function setMsg(text, cls){ const m = el('waveMsg'); m.textContent = text; m.className = cls || ''; }
+
+/* color helpers for blob slimes */
+function darken(color){
+  const r = Math.floor(color/0x10000), g = Math.floor(color/0x100)%0x100, b = color%0x100;
+  return Phaser.Display.Color.GetColor(r*.62, g*.62, b*.62);
+}
+function lighten(color){
+  const r = Math.floor(color/0x10000), g = Math.floor(color/0x100)%0x100, b = color%0x100;
+  return Phaser.Display.Color.GetColor(Math.min(255,r+.55*(255-r)), Math.min(255,g+.55*(255-g)), Math.min(255,b+.55*(255-b)));
+}
+
+/* ============================== AUDIO ============================== */
+let audioCtx = null;
+function sfx(kind){
+  try{
+    audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)();
+    if (audioCtx.state === 'suspended') audioCtx.resume();
+    const t = audioCtx.currentTime;
+    const tone = (freq, dur, type, vol, slide) => {
+      const o = audioCtx.createOscillator(), g = audioCtx.createGain();
+      o.type = type; o.frequency.setValueAtTime(freq, t);
+      if (slide) o.frequency.exponentialRampToValueAtTime(Math.max(30, slide), t + dur);
+      g.gain.setValueAtTime(vol, t);
+      g.gain.exponentialRampToValueAtTime(0.001, t + dur);
+      o.connect(g); g.connect(audioCtx.destination);
+      o.start(t); o.stop(t + dur);
+    };
+    if (kind==='shot')    tone(700,.05,'square',.03,900);
+    if (kind==='laser')   tone(1400,.06,'sawtooth',.025,2000);
+    if (kind==='boom')  { tone(100,.2,'sawtooth',.12,40); }
+    if (kind==='saw')     tone(220,.09,'square',.04,160);
+    if (kind==='hit')     tone(300,.05,'triangle',.04,120);
+    if (kind==='build')   tone(420,.12,'triangle',.1,650);
+    if (kind==='upgrade') { tone(520,.1,'triangle',.12); setTimeout(()=>tone(700,.1,'triangle',.12),90); setTimeout(()=>tone(920,.15,'triangle',.12),180); }
+    if (kind==='kill')    tone(260,.1,'square',.05,80);
+    if (kind==='leak')    tone(180,.35,'sawtooth',.12,50);
+    if (kind==='wave')    tone(392,.16,'triangle',.1,520);
+    if (kind==='win')   { tone(523,.14,'triangle',.13); setTimeout(()=>tone(659,.14,'triangle',.13),130); setTimeout(()=>tone(784,.28,'triangle',.15),260); }
+    if (kind==='lose')    tone(280,.5,'sawtooth',.12,70);
+  }catch(e){}
+}
+
+/* ============================== SCENE ============================== */
+let sceneRef = null;
+
+class GameScene extends Phaser.Scene {
+  constructor(){ super('game'); }
+
+  create(){
+    sceneRef = this;
+    this.gold = 220; this.baseHp = 100; this.baseMaxHp = 100; this.baseLvl = 1;
+    this.wave = 0; this.phase = 'idle';
+    this.enemies = []; this.towers = []; this.projectiles = []; this.spawnQueue = []; this.spawnTimer = 0;
+    this.placing = null; this.selected = null;
+    this.speed = 1; this.zoom = 1;
+    this.baseBurn = 0;
+
+    this.makeTextures();
+    this.drawBackground();
+    this.drawSpots();
+    this.drawBase();
+
+    // particle burst emitter (one-shot explosions)
+    this.fx = this.add.particles(0, 0, 'px', {
+      speed: {min: 60, max: 180}, lifespan: {min: 250, max: 520},
+      scale: {start: 1.2, end: 0}, emitting: false
+    }).setDepth(40);
+
+    /* ---------- input ---------- */
+    this.input.on('pointerdown', (p, objs) => {
+      if (this.phase==='lost' || this.phase==='won') return;
+      const wx = p.worldX, wy = p.worldY;
+      // clicked a placed tower? -> select it (upgrade UI is in DOM panel)
+      const t = this.towers.find(t => Math.hypot(t.x-wx, t.y-wy) < 30);
+      if (t){ this.selected = t; renderCards(); this.tweens.add({targets:t.cont, scale:{from:1,to:1.15}, duration:90, yoyo:true}); return; }
+      // placing mode -> nearest free spot within 40px
+      if (this.placing){
+        const spec = TOWERS[this.placing];
+        let best=null, bd=48;
+        for (const s of SPOTS){ if (s.tower) continue;
+          const d = Math.hypot(s.x-wx, s.y-wy); if (d<bd){bd=d;best=s;} }
+        if (!best){ setMsg('Click a glowing tower spot (stone circle) to build!'); return; }
+        if (this.gold < spec.cost){ setMsg(`Not enough gold! ${spec.name} costs ${spec.cost}g — you have ${this.gold}g.`,'bad'); return; }
+        this.buildTower(best, this.placing);
+        return;
+      }
+      this.selected = null; renderCards();
+    });
+
+    /* ---------- example garrison on open ---------- */
+    for (const st of START_TOWERS) this.buildTower(SPOTS[st.spot], st.type, st.name, true);
+    setMsg('The seas be calm. Place towers, then start Wave 1!');
+    renderCards();
+  }
+
+  /* ---------- textures ---------- */
+  makeTextures(){
+    const mk = (key,w,h,draw)=>{ const g=this.add.graphics(); draw(g); g.generateTexture(key,w,h); g.destroy(); };
+    mk('px',6,6,g=>{g.fillStyle(0xffffff);g.fillRect(0,0,6,6);});
+    mk('circle20',40,40,g=>{g.fillStyle(0xffffff);g.fillCircle(20,20,20);});
+    mk('circle26',52,52,g=>{g.fillStyle(0xffffff);g.fillCircle(26,26,26);});
+    mk('circle34',68,68,g=>{g.fillStyle(0xffffff);g.fillCircle(34,34,34);});
+    mk('bullet',10,6,g=>{g.fillStyle(0xffffff);g.fillRect(0,1,8,4);g.fillCircle(9,3,2);});
+    mk('spot',56,56,g=>{
+      g.fillStyle(0xd8c48e,.95); g.fillCircle(28,28,26);
+      g.lineStyle(3,0xa8895c); g.strokeCircle(28,28,26);
+      g.fillStyle(0xe9d8a6); g.fillCircle(28,28,17);
+      g.fillStyle(0xc4ad7a); g.fillCircle(20,22,3); g.fillCircle(34,32,2.5);
+    });
+    mk('flagwave',30,16,g=>{ g.fillStyle(0xa4161a); g.fillTriangle(0,0,30,6,0,13); g.fillStyle(0xffd166); g.fillCircle(8,6,2.5); });
+  }
+
+  /* ---------- background ---------- */
+  drawBackground(){
+    const bg = this.add.graphics();
+    // deep sea
+    bg.fillStyle(0x0b2545); bg.fillRect(0,0,W,H);
+    for (let i=0;i<300;i++){
+      const x = Phaser.Math.Between(0,W), y = Phaser.Math.Between(0,H);
+      bg.fillStyle(i%2?0x123055:0x0e2848, .6); bg.fillCircle(x,y, Phaser.Math.Between(2,6));
+    }
+    // wave ripples
+    bg.lineStyle(2, 0x2e6da4, .5);
+    for (let i=0;i<26;i++){
+      const x = Phaser.Math.Between(20,W-40), y = Phaser.Math.Between(20,H-20);
+      bg.beginPath(); bg.moveTo(x,y); bg.lineTo(x+Phaser.Math.Between(10,26), y); bg.strokePath();
+    }
+    // sand shoals scattered in the sea
+    const sand = (x,y,w,h) => {
+      bg.fillStyle(0xd8c48e, .8); bg.fillEllipse(x,y,w,h);
+      bg.fillStyle(0xe9d8a6, .8); bg.fillEllipse(x,y-h*.08,w*.8,h*.7);
+    };
+    sand(60,80,90,34); sand(300,500,110,38); sand(560,60,80,30); sand(880,90,70,26);
+    sand(180,480,70,26); sand(700,510,90,30); sand(60,340,64,24); sand(920,470,80,28);
+    // sand path (the slimes' route)
+    const road = this.add.graphics();
+    road.lineStyle(58, 0x8a6d45, 1); road.beginPath();
+    road.moveTo(WAYPOINTS[0][0], WAYPOINTS[0][1]);
+    for (let i=1;i<WAYPOINTS.length;i++) road.lineTo(WAYPOINTS[i][0], WAYPOINTS[i][1]);
+    road.strokePath();
+    road.lineStyle(48, 0xe9d8a6, 1); road.strokePath();
+    // path edge speckles + seashells
+    road.fillStyle(0xc4ad7a, .8);
+    for (let i=0;i<WAYPOINTS.length-1;i++){
+      const [x1,y1]=WAYPOINTS[i],[x2,y2]=WAYPOINTS[i+1];
+      const d=Math.hypot(x2-x1,y2-y1), steps=Math.floor(d/24);
+      for (let s=0;s<=steps;s++){
+        road.fillCircle(x1+(x2-x1)*s/steps+Phaser.Math.Between(-16,16), y1+(y2-y1)*s/steps+Phaser.Math.Between(-16,16), Phaser.Math.Between(2,4));
+      }
+    }
+    // little sailboats in the sea corners
+    const boat = (x,y,s,flip) => {
+      const g = this.add.graphics();
+      g.fillStyle(0x5e4a2a); g.fillRect(x-10*s, y, 20*s, 5*s);           // hull
+      g.lineStyle(2, 0x3a2c18); g.strokeRect(x-10*s, y, 20*s, 5*s);
+      g.lineStyle(2, 0x3a2c18);
+      g.beginPath(); g.moveTo(x, y); g.lineTo(x, y-20*s); g.strokePath(); // mast
+      g.fillStyle(0xf0e6d2);
+      g.fillTriangle(x, y-20*s, x + (flip?-12:12)*s, y-8*s, x, y-4*s);    // sail
+      g.setDepth(1);
+    };
+    boat(46,180,1,true); boat(930,360,1,false); boat(500,30,.8,true);
+    // wooden dock posts along the top (instead of vines)
+    const dock = this.add.graphics().setDepth(2);
+    dock.fillStyle(0x6f4518);
+    for (let i = 0; i < 7; i++){
+      dock.fillRect(30 + i*150, 46, 7, 14);
+      dock.fillStyle(0xe0a82e); dock.fillCircle(33.5 + i*150, 44, 3); dock.fillStyle(0x6f4518);
+    }
+  }
+
+  drawSpots(){
+    this.spotImgs = [];
+    for (const s of SPOTS){
+      const img = this.add.image(s.x, s.y, 'spot').setDepth(3).setAlpha(.9);
+      this.spotImgs.push(img);
+      this.tweens.add({targets:img, alpha:{from:.55,to:1}, duration:1100, yoyo:true, repeat:-1});
+    }
+  }
+
+  drawBase(){
+    const {x,y} = BASE;
+    const g = this.add.graphics().setDepth(6);
+    this.baseDraw = g;
+    this.baseGroup = this.add.container(x, y).setDepth(7);
+    this.baseFlag = this.add.image(14, -118, 'flagwave').setOrigin(0,.5);
+    this.baseGroup.add(this.baseFlag);
+    this.tweens.add({targets:this.baseFlag, angle:{from:-8,to:8}, duration:600, yoyo:true, repeat:-1});
+    this.baseBar = this.makeBar(0, -95, 110, 10);
+    this.baseGroup.add(this.baseBar.cont);
+    this.redrawBase();
+  }
+
+  redrawBase(){
+    const g = this.baseDraw; g.clear();
+    const lvl = this.baseLvl;
+    const GOLD = 0xe0a82e, GOLD_B = 0xffd166;
+    const {x,y} = BASE;
+    // sand island under the fortress
+    g.fillStyle(0xe9d8a6); g.fillEllipse(x, y+52, 190, 46);
+    g.fillStyle(0xd8c48e); g.fillEllipse(x, y+56, 160, 34);
+    // gray rocks around the base (like reference)
+    g.fillStyle(0x8d99ae);
+    g.fillEllipse(x-78, y+44, 16, 11); g.fillEllipse(x+70, y+48, 13, 9);
+    g.fillEllipse(x-52, y+58, 10, 7); g.fillEllipse(x+48, y+60, 11, 8);
+    g.fillEllipse(x-20, y+62, 9, 6); g.fillEllipse(x+24, y+64, 8, 6);
+    // fortress body: beige stone keep
+    g.fillStyle(0xd9c9a3); g.fillRect(x-52, y-30, 104, 82);
+    g.lineStyle(3, 0x8f7f5c); g.strokeRect(x-52, y-30, 104, 82);
+    g.fillStyle(0xc4b28c);                                                  // stone patches
+    g.fillRect(x-44, y-22, 8, 8); g.fillRect(x+30, y-16, 8, 8);
+    g.fillRect(x-16, y+2, 8, 8); g.fillRect(x+6, y+26, 8, 8); g.fillRect(x-40, y+34, 8, 8);
+    // battlements
+    g.fillStyle(0xb5a276);
+    for (let i = 0; i < 5; i++) g.fillRect(x-52 + i*22, y-42, 14, 14);
+    // gate: arched double door with gold trim at higher levels
+    g.fillStyle(0x5e3a16);
+    g.fillCircle(x, y+16, 15); g.fillRect(x-15, y+16, 30, 34);
+    g.lineStyle(2.5, lvl >= 2 ? GOLD : 0x3d2b16); g.strokeCircle(x, y+16, 15);
+    g.lineStyle(1.5, 0x3d2b16);
+    g.beginPath(); g.moveTo(x, y+3); g.lineTo(x, y+50); g.strokePath();    // door split
+    g.fillStyle(GOLD_B); g.fillCircle(x-6, y+28, 2); g.fillCircle(x+6, y+28, 2); // handles
+    // side turrets (grow with level)
+    g.fillStyle(0xc4b28c); g.fillRect(x-66, y-24, 16, 72); g.fillRect(x+50, y-24, 16, 72);
+    g.lineStyle(2.5, 0x8f7f5c); g.strokeRect(x-66, y-24, 16, 72); g.strokeRect(x+50, y-24, 16, 72);
+    // turret roofs: red cones -> gold-banded at lvl4+
+    const cone = (cx) => {
+      g.fillStyle(lvl >= 4 ? 0x1d4e7a : 0xa4161a);
+      g.fillTriangle(cx-11, y-24, cx+11, y-24, cx, y-52);
+      g.lineStyle(2, lvl >= 4 ? GOLD : 0x6e0d10);
+      g.strokeTriangle(cx-11, y-24, cx+11, y-24, cx, y-52);
+    };
+    cone(x-58); cone(x+58);
+    // main tower + roof
+    g.fillStyle(0xd9c9a3); g.fillRect(x-20, y-78, 40, 40);
+    g.lineStyle(2.5, 0x8f7f5c); g.strokeRect(x-20, y-78, 40, 40);
+    g.fillStyle(lvl >= 3 ? 0x1d4e7a : 0xa4161a);
+    g.fillTriangle(x-26, y-78, x+26, y-78, x, y-112);
+    g.lineStyle(2.5, lvl >= 3 ? GOLD : 0x6e0d10);
+    g.strokeTriangle(x-26, y-78, x+26, y-78, x, y-112);
+    // level embellishments
+    if (lvl >= 2){ g.fillStyle(GOLD); g.fillCircle(x-44, y-56, 5); g.fillCircle(x+44, y-56, 5); } // gold plates
+    if (lvl >= 3){ g.fillStyle(GOLD_B); g.fillCircle(x, y-58, 6); g.lineStyle(2, GOLD); g.strokeCircle(x, y-58, 6); } // emblem
+    if (lvl >= 4){ g.fillStyle(0x7fd8f7); g.fillCircle(x, y-118, 7); g.lineStyle(2, 0xffffff); g.strokeCircle(x, y-118, 7); } // crystal
+    if (lvl >= 5){ g.fillStyle(GOLD_B); g.fillTriangle(x-8, y-112, x+8, y-112, x, y-126); }
+    // cannons on the walls at lvl 5
+    if (lvl >= 5){
+      g.fillStyle(0x2b2f36);
+      g.fillRect(x-50, y-34, 16, 7); g.fillRect(x+34, y-34, 16, 7);
+    }
+  }
+
+  makeBar(x, y, w, h){
+    const cont = this.add.container(x, y);
+    const bg = this.add.rectangle(0, 0, w, h, 0x000000).setAlpha(.65).setOrigin(.5);
+    const fg = this.add.rectangle(-w/2, 0, w, h-2, 0x57d05e).setOrigin(0,.5);
+    cont.add([bg, fg]);
+    return {cont, fg, w};
+  }
+  setBar(bar, frac, danger){
+    bar.fg.scaleX = Math.max(0.001, frac);
+    bar.fg.setFillStyle(danger ? 0xef233c : frac < .45 ? 0xffb703 : 0x57d05e);
+  }
+
+  /* ---------- towers ---------- */
+  buildTower(spot, type, name, free){
+    const spec = TOWERS[type];
+    const t = {
+      spot, type, spec, name: name || spec.name,
+      x: spot.x, y: spot.y, lvl: 1,
+      hp: 60, maxHp: 60,
+      cooldown: 0, angle: 0, flash: 0,
+      burn: 0, chill: 0,   // elemental status
+      cont: null, top: null, bar: null
+    };
+    spot.tower = t;
+    this.towers.push(t);
+    this.drawTower(t);
+    if (!free){
+      this.gold -= spec.cost;
+      this.fx.setParticleTint(0xffd166); this.fx.explode(16, t.x, t.y);
+      this.cameras.main.shake(80,.003); sfx('build');
+    }
+    renderCards();
+    return t;
+  }
+
+  drawTower(t){
+    if (t.cont) t.cont.destroy();
+    const cont = this.add.container(t.x, t.y).setDepth(8);
+    const g = this.add.graphics();
+    const lvl = t.lvl;
+    const GOLD = 0xe0a82e, GOLD_B = 0xffd166;
+
+    // ---- two-tier circular base (like the reference set) ----
+    g.fillStyle(0x3a2c18); g.fillCircle(0, 6, 17 + lvl*1.5);          // shadow tier
+    g.fillStyle(0x8a6d45); g.fillCircle(0, 4, 16 + lvl*1.5);          // bottom planks
+    g.lineStyle(2, 0x5e4a2a);
+    for (let a = 0; a < 6; a++){                                       // plank lines
+      const ang = a/6*Math.PI*2;
+      g.beginPath(); g.moveTo(Math.cos(ang)*5, 4+Math.sin(ang)*5);
+      g.lineTo(Math.cos(ang)*(16+lvl*1.5), 4+Math.sin(ang)*(16+lvl*1.5)); g.strokePath();
+    }
+    g.fillStyle(0x9aa0a8); g.fillCircle(0, -1, 12 + lvl);              // stone top tier
+    g.lineStyle(2, 0x565b63); g.strokeCircle(0, -1, 12 + lvl);
+
+    // ---- tower body: chunky cylinder with domed roof ----
+    const bw = 9 + lvl;                                                // body widens with level
+    g.fillStyle(0xd9c9a3); g.fillRect(-bw, -24-lvl*2, bw*2, 22+lvl*2); // beige wall
+    g.lineStyle(2, 0x8f7f5c); g.strokeRect(-bw, -24-lvl*2, bw*2, 22+lvl*2);
+    // stone patches on wall
+    g.fillStyle(0xc4b28c);
+    g.fillRect(-bw+2, -18, 4, 4); g.fillRect(bw-7, -22, 4, 4); g.fillRect(-2, -10, 4, 4);
+    // door
+    g.fillStyle(0x5e3a16); g.fillCircle(0, -2, 4.5); g.fillRect(-4.5, -2, 9, 8);
+    if (lvl >= 2){ g.lineStyle(1.5, GOLD); g.strokeCircle(0, -2, 4.5); }
+    // domed roof (red at low lvl, gold-banded at high)
+    g.fillStyle(lvl >= 4 ? 0x1d4e7a : 0xa4161a);
+    g.fillTriangle(-bw-3, -24-lvl*2, bw+3, -24-lvl*2, 0, -38-lvl*3);
+    g.lineStyle(2, lvl >= 4 ? GOLD : 0x6e0d10);
+    g.strokeTriangle(-bw-3, -24-lvl*2, bw+3, -24-lvl*2, 0, -38-lvl*3);
+
+    // ---- banners (grow with level) ----
+    const banner = (bx, w) => {
+      g.fillStyle(0xa4161a); g.fillRect(bx, -30-lvl*2, w, 12+lvl);
+      g.fillStyle(GOLD_B); g.fillRect(bx, -26-lvl*2, w, 2);
+    };
+    banner(-bw-9, 5);
+    if (lvl >= 3) banner(bw+4, 5);
+    if (lvl >= 5) banner(-bw-16, 5);
+
+    // ---- weapon on top (per type, grows with level) ----
+    if (t.type==='fire'){
+      // cannon: dark barrel on a wooden mount + gold rim
+      g.fillStyle(0x3a2c18); g.fillCircle(0, -38-lvl*3, 5);
+      g.fillStyle(0x2b2f36); g.fillRect(-3, -46-lvl*3, 15+lvl*2, 8);     // barrel
+      g.lineStyle(2, 0x14161a); g.strokeRect(-3, -46-lvl*3, 15+lvl*2, 8);
+      g.fillStyle(lvl>=3 ? GOLD : 0x565b63); g.fillRect(10+lvl*2, -47-lvl*3, 3, 10); // muzzle rim
+      if (lvl>=5){ g.fillStyle(0x2b2f36); g.fillRect(-3, -54-lvl*3, 13+lvl*2, 7);
+        g.fillStyle(GOLD); g.fillRect(8+lvl*2, -55-lvl*3, 3, 9); }      // second barrel!
+    } else if (t.type==='laser'){
+      // golden crossbow: bow arms + bolt
+      g.lineStyle(3, GOLD); g.lineStyle(3, GOLD, 1);
+      g.beginPath(); g.arc(2, -40-lvl*3, 9+lvl, -Math.PI*0.8, -Math.PI*0.2); g.strokePath();
+      g.beginPath(); g.arc(2, -40-lvl*3, 9+lvl, Math.PI*0.2, Math.PI*0.8); g.strokePath();
+      g.fillStyle(0x8a6210); g.fillRect(-2, -42-lvl*3, 14+lvl*2, 4);     // stock
+      g.fillStyle(0xe8e8e8); g.fillTriangle(12+lvl*2, -42-lvl*3, 12+lvl*2, -38-lvl*3, 20+lvl*2, -40-lvl*3); // bolt
+      if (lvl>=5){ g.fillStyle(0xe8e8e8); g.fillTriangle(-2, -44-lvl*3, -2, -36-lvl*3, -10, -40-lvl*3); } // rear bolt
+    } else if (t.type==='chainsaw'){
+      // spinning cutlass blades
+      g.fillStyle(0x6f4518); g.fillCircle(0, -38-lvl*3, 4);              // hub
+      g.lineStyle(3, 0xb7c0cc);
+      for (let a = 0; a < 4 + lvl; a++){
+        const ang = a/(4+lvl)*Math.PI*2;
+        g.beginPath(); g.moveTo(Math.cos(ang)*4, -38-lvl*3+Math.sin(ang)*4);
+        g.lineTo(Math.cos(ang)*(10+lvl*1.5), -38-lvl*3+Math.sin(ang)*(10+lvl*1.5)); g.strokePath();
+      }
+      g.fillStyle(GOLD_B); g.fillCircle(0, -38-lvl*3, 2.5);
+    } else {
+      // swivel gun: small barrel on a peg
+      g.fillStyle(0x6f4518); g.fillCircle(0, -38-lvl*3, 4);
+      g.fillStyle(0x3f4b5a); g.fillRect(-2, -45-lvl*3, 13+lvl*2, 6);
+      g.lineStyle(1.5, 0x222a35); g.strokeRect(-2, -45-lvl*3, 13+lvl*2, 6);
+      if (lvl>=5){ g.fillStyle(0x3f4b5a); g.fillRect(-2, -51-lvl*3, 11+lvl*2, 5); } // twin barrel
+      if (lvl>=3){ g.fillStyle(GOLD); g.fillCircle(0, -38-lvl*3, 2); }
+    }
+
+    // gold coins around the base (upgrade flourish like reference images)
+    for (let i = 0; i < lvl-1; i++){
+      const ang = -0.6 - i*0.5;
+      g.fillStyle(GOLD_B); g.fillCircle(Math.cos(ang)*(19+lvl), 6+Math.sin(ang)*8, 3);
+    }
+
+    cont.add(g);
+    // health bar
+    const bar = this.makeBar(0, -pr_bar_y(lvl), 44, 7);
+    function pr_bar_y(l){ return -52 - l*3; }
+    cont.add(bar.cont);
+    this.setBar(bar, 1);
+    t.cont = cont; t.bar = bar;
+    t.bodyG = g;
+  }
+
+  upgradeTower(t){
+    if (t.lvl >= MAX_LVL) return;
+    const cost = UPGRADE_COST(t.lvl);
+    if (this.gold < cost){ setMsg(`Upgrade needs ${cost}g — you have ${this.gold}g.`,'bad'); return; }
+    this.gold -= cost;
+    t.lvl++;
+    t.maxHp = 60 + (t.lvl-1)*25; t.hp = t.maxHp;
+    this.drawTower(t);
+    this.fx.setParticleTint(0xffd166); this.fx.explode(20, t.x, t.y);
+    this.cameras.main.shake(90,.004); sfx('upgrade');
+    const unlocked = t.spec.unlock[t.lvl];
+    setMsg(`${t.name} upgraded to Lv.${t.lvl}! ${unlocked ? '🌟 UNLOCKED: ' + unlocked : 'Power and looks increased.'}`,'good');
+    renderCards();
+  }
+
+  upgradeBase(){
+    if (this.baseLvl >= MAX_LVL) return;
+    const cost = 80 + this.baseLvl*50;
+    if (this.gold < cost){ setMsg(`Base upgrade needs ${cost}g — you have ${this.gold}g.`,'bad'); return; }
+    this.gold -= cost;
+    this.baseLvl++;
+    this.baseMaxHp = 100 + (this.baseLvl-1)*40;
+    this.baseHp = this.baseMaxHp;
+    this.redrawBase();
+    this.fx.setParticleTint(0x57d05e); this.fx.explode(30, BASE.x, BASE.y-40);
+    this.cameras.main.shake(120,.005); sfx('upgrade');
+    setMsg(`🏴‍☠️ Stronghold upgraded to Lv.${this.baseLvl}! Max HP now ${this.baseMaxHp}.`,'good');
+    renderCards();
+  }
+
+  /* ---------- waves ---------- */
+  buildWaveList(n){
+    const q = [];
+    const count = 4 + n*2;
+    const types = ['fire'];
+    if (n >= 2) types.push('ice');
+    if (n >= 4) types.push('earth');
+    if (n >= 3) types.push('wind');
+    for (let i=0;i<count;i++){
+      q.push({ type: types[Math.floor(i / Math.ceil(count/types.length)) % types.length] || 'fire', delay: .7 });
+    }
+    // boss slime every 4 waves
+    if (n % 4 === 0){ q.push({type:'earth', delay:1.5, boss:true}); }
+    return q;
+  }
+
+  startWave(){
+    if (this.phase !== 'idle') return;
+    this.wave++;
+    this.spawnQueue = this.buildWaveList(this.wave);
+    this.spawnTimer = 0; this.phase = 'wave';
+    sfx('wave');
+    setMsg(`Wave ${this.wave} — ${this.spawnQueue.length} slimes crawl out o' the sea!`);
+  }
+
+  skipWave(){
+    // jump straight to the next wave: clear enemies (they deal no damage), advance counter
+    if (this.phase === 'wave'){
+      for (const e of this.enemies) e.cont.destroy();
+      this.enemies.length = 0;
+      for (const p of this.projectiles) p.cont.destroy();
+      this.projectiles.length = 0;
+      this.spawnQueue.length = 0;
+      this.phase = 'idle';
+      const bonus = 15 + this.wave*4;
+      this.gold += bonus;
+      setMsg(`⏭ Skipped Wave ${this.wave}! ${bonus}g consolation gold. Next wave is stronger!`,'good');
+      this.startWave();
+    } else if (this.phase === 'idle' && this.wave < MAX_WAVE){
+      // idle skip: instantly start next wave without fighting current (used between waves)
+      this.startWave();
+    }
+  }
+
+  spawnEnemy(type, boss){
+    const s = SLIMES[type];
+    const hp = Math.round((28 + this.wave*7) * s.hpMul * (boss?3.2:1));
+    const spd = (46 + this.wave*2.2) * s.spMul * (boss?.8:1);
+    const rw = Math.round((7 + this.wave*1.6) * s.rwMul * (boss?4:1));
+    const r = boss ? 20 : s.r;
+    const cont = this.add.container(WAYPOINTS[0][0], WAYPOINTS[0][1]).setDepth(15);
+    // pillowy blob body (soft shape with darker outline, like reference)
+    const body = this.add.graphics();
+    const bodyColor = s.color;
+    const drawBlob = (scale) => {
+      body.clear();
+      body.fillStyle(darken(bodyColor), 1);
+      body.fillEllipse(0, 2, r*2.3*scale, r*2.1*scale);              // outline layer
+      body.fillStyle(bodyColor, 1);
+      body.fillEllipse(0, 0, r*2.15*scale, r*1.95*scale);            // body
+      body.fillStyle(lighten(bodyColor), .85);
+      body.fillEllipse(-r*.45, -r*.5, r*.75*scale, r*.55*scale);     // shine blob
+    };
+    drawBlob(1);
+    // cute face: two eyes + mouth (like the reference blob)
+    const eyeL = this.add.circle(-r*.4, -r*.15, boss?4:3, 0x1c1c1c);
+    const eyeR = this.add.circle(r*.4, -r*.15, boss?4:3, 0x1c1c1c);
+    const shineL = this.add.circle(-r*.4+1, -r*.15-1, 1, 0xffffff);
+    const shineR = this.add.circle(r*.4+1, -r*.15-1, 1, 0xffffff);
+    const mouth = this.add.graphics();
+    mouth.lineStyle(1.6, 0x1c1c1c, 1);
+    mouth.beginPath(); mouth.arc(0, r*.25, r*.3, 0.15*Math.PI, 0.85*Math.PI); mouth.strokePath();
+    const bar = this.makeBar(0, -r-14, boss?64:44, 7);
+    cont.add([bar.cont, body, eyeL, eyeR, shineL, shineR, mouth]);
+    // squishy wobble
+    this.tweens.add({
+      targets: cont, scaleX:{from:.88,to:1.08}, scaleY:{from:1.1,to:.9},
+      duration:420, yoyo:true, repeat:-1, ease:'sine.inout'
+    });
+    if (boss){
+      // little pirate bandana on boss
+      const hat = this.add.graphics();
+      hat.fillStyle(0xa4161a);
+      hat.fillEllipse(0, -r*.75, r*1.5, r*.6);
+      hat.fillStyle(0xe0a82e);
+      hat.fillCircle(-r*.7, -r*.7, 2.4); hat.fillCircle(0, -r*.95, 2.4); hat.fillCircle(r*.7, -r*.7, 2.4);
+      cont.add(hat);
+    }
+    this.enemies.push({
+      type, boss:!!boss, cont, body, drawBlob, bar, r,
+      x:WAYPOINTS[0][0], y:WAYPOINTS[0][1], wp:1,
+      hp, maxHp:hp, speed:spd, reward:rw, progress:0,
+      atkCd:0
+    });
+  }
+
+  /* ---------- damage helpers ---------- */
+  popup(str,x,y,color,size){
+    const txt = this.add.text(x,y,str,{fontFamily:'Baloo 2,sans-serif',fontSize:(size||14)+'px',color,fontStyle:'bold',stroke:'#000',strokeThickness:4}).setOrigin(.5).setDepth(60);
+    this.tweens.add({targets:txt, y:y-34, alpha:0, duration:850, ease:'cubic.out', onComplete:()=>txt.destroy()});
+  }
+
+  hitEnemy(e, dmg){
+    e.hp -= dmg;
+    // white flash on the blob
+    e.cont.scaleY = 1.25; e.cont.scaleX = .8;                         // impact squish
+    this.time.delayedCall(90, () => { e.cont.scaleX = 1; e.cont.scaleY = 1; });
+    if (e.hp <= 0 && this.enemies.includes(e)){
+      this.enemies.splice(this.enemies.indexOf(e),1);
+      this.gold += e.reward;
+      this.popup('+'+e.reward+'g', e.x, e.y-16, '#ffd166');
+      this.fx.setParticleTint(SLIMES[e.type].color);
+      this.fx.explode(e.boss?40:14, e.x, e.y);
+      sfx('kill');
+      e.cont.destroy();
+    }
+  }
+
+  hitTower(t, dmg){
+    t.hp -= dmg;
+    this.setBar(t.bar, t.hp/t.maxHp, true);
+    this.fx.setParticleTint(0xef233c);
+    this.fx.explode(6, t.x, t.y-10);
+    if (t.hp <= 0){
+      // tower destroyed
+      this.towers.splice(this.towers.indexOf(t),1);
+      t.spot.tower = null;
+      this.fx.explode(30, t.x, t.y);
+      this.cameras.main.shake(240,.008);
+      sfx('boom');
+      this.popup('TOWER DOWN!', t.x, t.y-20, '#ff9d9d', 16);
+      t.cont.destroy();
+      if (this.selected === t){ this.selected = null; renderCards(); }
+    }
+  }
+
+  hitBase(dmg){
+    this.baseHp -= dmg;
+    this.cameras.main.shake(200,.008);
+    const r = this.add.rectangle(0,0,W,H,0xef233c,.25).setOrigin(0).setDepth(70);
+    this.tweens.add({targets:r, alpha:0, duration:320, onComplete:()=>r.destroy()});
+    sfx('leak');
+    if (this.baseHp <= 0){
+      this.baseHp = 0;
+      this.phase = 'lost';
+      sfx('lose');
+      setMsg(`💀 Yer stronghold was overrun on Wave ${this.wave}! Press Restart to try again, matey.`,'bad');
+    }
+  }
+
+  /* ---------- update ---------- */
+  update(_t, deltaMs){
+    const dt = Math.min(deltaMs/1000, .05) * this.speed;
+    this.time_ = (this.time_||0) + dt;
+
+    // base HP bar always
+    this.setBar(this.baseBar, this.baseHp/this.baseMaxHp, true);
+
+    if (this.phase!=='lost' && this.phase!=='won'){
+      // spawn
+      if (this.phase==='wave' && this.spawnQueue.length){
+        this.spawnTimer -= dt;
+        if (this.spawnTimer <= 0){
+          const s = this.spawnQueue.shift();
+          this.spawnEnemy(s.type, s.boss);
+          this.spawnTimer = s.delay;
+        }
+      }
+
+      /* ---- enemies ---- */
+      for (let i=this.enemies.length-1;i>=0;i--){
+        const e = this.enemies[i];
+        let rem = e.speed*dt, arrived=false;
+        while (rem>0){
+          const wp = WAYPOINTS[e.wp];
+          const dx=wp[0]-e.x, dy=wp[1]-e.y, d=Math.hypot(dx,dy);
+          if (d<=rem){ e.x=wp[0]; e.y=wp[1]; rem-=d; e.wp++;
+            if (e.wp>=WAYPOINTS.length){arrived=true;break;} }
+          else { e.x+=dx/d*rem; e.y+=dy/d*rem; rem=0; }
+        }
+        e.progress += e.speed*dt;
+        e.cont.setPosition(e.x, e.y);
+        this.setBar(e.bar, e.hp/e.maxHp, false);
+
+        // WIND SLIME: periodically jumps forward past towers
+        if (e.type==='wind' && !e.jumpCd) e.jumpCd = 4;
+        if (e.type==='wind'){
+          e.jumpCd -= dt;
+          if (e.jumpCd<=0 && e.wp < WAYPOINTS.length-1){
+            e.wp++; e.jumpCd = 4;
+            this.fx.setParticleTint(SLIMES.wind.color);
+            this.fx.explode(12, e.x, e.y);
+            const tgt = WAYPOINTS[e.wp];
+            this.tweens.add({ targets:e.cont, x:tgt[0], y:tgt[1], duration:380, ease:'cubic.in' });
+            e.x = tgt[0]; e.y = tgt[1];
+            this.popup('WHOOSH!', e.x, e.y-30, '#c9f26f', 13);
+          }
+        }
+
+        // slime attacks nearby towers
+        e.atkCd -= dt;
+        if (e.atkCd <= 0){
+          for (const t of this.towers){
+            if (Math.hypot(t.x-e.x, t.y-e.y) < 46){
+              e.atkCd = 1.1;
+              const base = e.type==='earth' ? 14 : 5;      // EARTH hits towers hard
+              this.hitTower(t, base);
+              this.popup(e.type==='earth'?'SMASH!':'hit', t.x, t.y-30, e.type==='earth'?'#ffb703':'#ff9d9d', e.type==='earth'?15:11);
+              break;
+            }
+          }
+        }
+
+        // FIRE slime burns towers it passes (damage over time handled per-tower below)
+        if (e.type==='fire'){
+          for (const t of this.towers){
+            if (Math.hypot(t.x-e.x, t.y-e.y) < 90) t.burn = Math.max(t.burn, 2.5); // apply burning
+          }
+        }
+        // ICE slime chills towers in radius
+        if (e.type==='ice'){
+          for (const t of this.towers){
+            if (Math.hypot(t.x-e.x, t.y-e.y) < 90) t.chill = Math.max(t.chill, 2.0);
+          }
+        }
+
+        if (arrived){
+          this.enemies.splice(i,1);
+          e.cont.destroy();
+          this.hitBase(e.boss?18:8);
+          if (this.phase!=='lost')
+            setMsg(`A ${SLIMES[e.type].label} ${e.boss?'BOSS ':''}battered the stronghold! HP: ${Math.max(0,Math.round(this.baseHp))}`, 'bad');
+        }
+      }
+
+      /* ---- tower status effects + regen ---- */
+      for (let i=this.towers.length-1;i>=0;i--){
+        const t = this.towers[i];
+        if (t.burn > 0){
+          t.burn -= dt;
+          t.hp -= 4.5*dt;                       // FIRE burns towers over time
+          if (Math.random() < dt*6){
+            this.fx.setParticleTint(0xff6b35);
+            this.fx.explode(2, t.x + Phaser.Math.Between(-8,8), t.y - Phaser.Math.Between(4,24));
+          }
+        }
+        if (t.chill > 0) t.chill -= dt;
+        this.setBar(t.bar, Math.max(0,t.hp)/t.maxHp, t.hp < t.maxHp*.35);
+        if (t.hp <= 0) this.hitTower(t, 0);
+        // slow self-repair
+        t.hp = Math.min(t.maxHp, t.hp + 1.2*dt);
+      }
+
+      /* ---- towers shoot ---- */
+      for (const t of this.towers){
+        t.cooldown -= dt * (t.chill>0 ? .45 : 1);       // ICE slows tower attacks
+        if (t.cooldown > 0) continue;
+        // find target
+        let best=null;
+        for (const e of this.enemies){
+          const d = Math.hypot(e.x-t.x, e.y-t.y);
+          if (d <= t.spec.range * (1 + (t.lvl-1)*.08)){
+            if (!best || e.progress > best.progress) best = e;
+          }
+        }
+        if (!best) continue;
+        const rateMul = (t.type==='laser' && t.lvl>=5) ? .55 : (t.type==='mg' && t.lvl>=3) ? .67 : 1;
+        const dmgMul = (t.type==='mg' && t.lvl>=5) ? 2 : (t.type==='fire' && t.lvl>=5) ? 1.7 : 1;
+        t.cooldown = t.spec.rate / rateMul;
+        t.angle = Math.atan2(best.y-t.y, best.x-t.x);
+        sfx(t.type==='laser'?'laser':t.type==='mg'?'shot':t.type==='fire'?'boom':'saw');
+
+        if (t.type==='chainsaw'){
+          // melee: damage all in range (Shredder at lvl5)
+          const hitAll = t.lvl >= 5;
+          const targets = hitAll ? this.enemies.filter(e=>Math.hypot(e.x-t.x,e.y-t.y)<t.spec.range) : [best];
+          for (const e of targets){
+            this.hitEnemy(e, t.spec.dmg * (1+(t.lvl-1)*.4) * dmgMul);
+            if (t.lvl>=3) e.bleed = 3;   // Ripper: bleed
+          }
+          this.fx.setParticleTint(0xeceff1);
+          this.fx.explode(8, best.x, best.y);
+        } else {
+          const pc = this.add.container(t.x, t.y-20).setDepth(30);
+          let proj;
+          if (t.type==='fire'){
+            proj = this.add.image(0,0,'circle20').setTint(t.spec.pColor).setScale(.55 + t.lvl*.05);
+          } else if (t.type==='laser'){
+            proj = this.add.rectangle(0,0,26,4,t.spec.pColor).setRotation(t.angle);
+            if (t.lvl>=3) proj.height = 8;   // Prism visual
+          } else {
+            proj = this.add.image(0,0,'bullet').setTint(t.spec.pColor).setRotation(t.angle);
+          }
+          pc.add(proj);
+          this.projectiles.push({cont:pc, target:best, tx:best.x, ty:best.y,
+            speed: t.type==='laser'?800:420, dmg: t.spec.dmg*(1+(t.lvl-1)*.4)*dmgMul,
+            splash: t.type==='fire' ? (t.lvl>=3?70:46) : 0, kind:t.type, pierce: t.type==='laser'&&t.lvl>=3 ? 2 : 1, hitList:[]});
+        }
+      }
+
+      /* ---- projectile flight ---- */
+      for (let i=this.projectiles.length-1;i>=0;i--){
+        const p = this.projectiles[i];
+        if (p.target && this.enemies.includes(p.target)){ p.tx=p.target.x; p.ty=p.target.y; }
+        else if (p.pierce > 1 && p.target){ p.target = null; }
+        const dx=p.tx-p.cont.x, dy=p.ty-p.cont.y, d=Math.hypot(dx,dy);
+        const step = p.speed*dt;
+        if (d <= step || d < 5){
+          if (p.splash){
+            this.fx.setParticleTint(0xffa502);
+            this.fx.explode(26, p.tx, p.ty);
+            this.cameras.main.shake(90,.004);
+            for (const e of this.enemies){
+              if (Math.hypot(e.x-p.tx, e.y-p.ty) <= p.splash) this.hitEnemy(e, p.dmg);
+            }
+          } else if (p.target){
+            this.hitEnemy(p.target, p.dmg);
+            this.fx.setParticleTint(0xaef1ff);
+            this.fx.explode(5, p.tx, p.ty);
+          }
+          p.cont.destroy();
+          this.projectiles.splice(i,1);
+        } else {
+          p.cont.x += dx/d*step; p.cont.y += dy/d*step;
+        }
+      }
+
+      /* ---- bleed effect ---- */
+      for (const e of this.enemies){
+        if (e.bleed > 0){ e.bleed -= dt; e.hp -= 6*dt; 
+          if (e.hp<=0) this.hitEnemy(e, 0); }
+      }
+
+      /* ---- wave clear ---- */
+      if (this.phase==='wave' && !this.spawnQueue.length && !this.enemies.length){
+        const bonus = 20 + this.wave*6;
+        this.gold += bonus;
+        if (this.wave >= MAX_WAVE){
+          this.phase = 'won';
+          sfx('win');
+          setMsg(`🏆 VICTORY! All ${MAX_WAVE} waves o' slimes sent to the depths! Final plunder: ${this.gold} gold.`,'good');
+        } else {
+          this.phase = 'idle';
+          setMsg(`Wave ${this.wave} cleared! +${bonus}g bounty. Upgrade towers or start Wave ${this.wave+1}.`,'good');
+        }
+      }
+    }
+
+    // camera zoom label sync (cheap)
+    if (this.game.canvas) updateHUD();
+  }
+}
+
+/* ============================== BOOT ============================== */
+const game = new Phaser.Game({
+  type: Phaser.AUTO,
+  width: W, height: H,
+  parent: 'game-container',
+  backgroundColor: '#2d7a3e',
+  scale: { mode: Phaser.Scale.FIT, autoCenter: Phaser.Scale.CENTER_HORIZONTALLY },
+  scene: GameScene
+});
+
+/* ============================== DOM UI ============================== */
+const SPEEDS = [1, 2, 3];
+
+function renderCards(){
+  const wrap = el('tower-cards');
+  const S = sceneRef;
+  let html = '';
+  for (const key of Object.keys(TOWERS)){
+    const spec = TOWERS[key];
+    const placed = S ? S.towers.filter(t=>t.type===key) : [];
+    const sel = S && S.selected && S.selected.type===key ? S.selected : (placed[0]||null);
+    const lvl = sel ? sel.lvl : 0;
+    const canPlace = S && S.gold >= spec.cost && S.phase!=='lost' && S.phase!=='won';
+    const upCost = sel ? UPGRADE_COST(sel.lvl) : 0;
+    const unlockNext = sel ? (spec.unlock[sel.lvl+1] || null) : null;
+    html += `
+    <div class="card ${S && S.placing===key ? 'armed':''}">
+      <div class="row1">
+        <span class="ticon">${spec.icon}</span>
+        <span class="tname">${spec.name}</span>
+        <span class="tcost">${spec.cost}g</span>
+      </div>
+      <div class="tdesc">${spec.desc}</div>
+      <div class="stats">
+        <span>⚔ DMG <b>${spec.dmg}${lvl?` → ${Math.round(spec.dmg*(1+(lvl-1)*.4))}`:''}</b></span>
+        <span>🎯 RNG <b>${spec.range}</b></span>
+        <span>⏱ RATE <b>${spec.rate}s</b></span>
+      </div>
+      ${sel ? `<div><span class="lvl">Lv.${sel.lvl}${sel===S?.selected?' · selected':''}</span>
+        <span style="font-size:11px;color:#9fd49a"> in garrison: ${placed.length}</span></div>` : '<div style="font-size:11px;color:#7fa87a">not placed yet</div>'}
+      ${sel && sel.lvl < 5 ? `<div style="font-size:11px;color:#ffd166">🌟 Next unlock at Lv.${sel.lvl+1}: ${unlockNext||'power boost'}</div>` : ''}
+      <div style="display:flex;gap:6px">
+        <button data-place="${key}" ${canPlace?'':'disabled'}>Build (${spec.cost}g)</button>
+        ${sel && sel.lvl<5 ? `<button data-up="${key}" ${S && S.gold>=upCost?'':'disabled'}>Upgrade ${upCost}g</button>` : sel?`<span class="lvl" style="align-self:center">MAX LEVEL</span>`:''}
+      </div>
+    </div>`;
+  }
+  // base card
+  const S2 = sceneRef;
+  const bCost = 80 + (S2?S2.baseLvl:1)*50;
+  html += `
+  <div class="card">
+    <div class="row1"><span class="ticon">🏴‍☠️</span><span class="tname">Pirate Stronghold</span>
+      <span class="tcost">❤️ ${S2?S2.baseHp:100}/${S2?S2.baseMaxHp:100}</span></div>
+    <div class="tdesc">Yer pirate stronghold. Upgrades add max HP, gold trim, turret roofs and a crystal.</div>
+    <div><span class="lvl">Lv.${S2?S2.baseLvl:1}</span></div>
+    ${S2 && S2.baseLvl<5 ? `<div style="font-size:11px;color:#ffd166">Upgrading: +40 max HP & new decoration</div>` : '<div style="font-size:11px;color:#ffd166">Max level!</div>'}
+    <div><button data-base="1" ${S2 && S2.gold>=bCost && S2.baseLvl<5 ?'':'disabled'}>Upgrade Base ${S2&&S2.baseLvl<5?bCost+'g':''}</button></div>
+  </div>`;
+  wrap.innerHTML = html;
+
+  wrap.querySelectorAll('[data-place]').forEach(b => b.addEventListener('click', () => {
+    const S = sceneRef;
+    if (!S) return;
+    S.placing = (S.placing === b.dataset.place) ? null : b.dataset.place;
+    S.selected = null;
+    renderCards();
+  }));
+  wrap.querySelectorAll('[data-up]').forEach(b => b.addEventListener('click', () => {
+    const S = sceneRef;
+    if (!S) return;
+    // upgrade selected tower of that type, or the first one
+    const t = (S.selected && S.selected.type===b.dataset.up) ? S.selected : S.towers.find(t=>t.type===b.dataset.up);
+    if (t) S.upgradeTower(t);
+  }));
+  wrap.querySelectorAll('[data-base]').forEach(b => b.addEventListener('click', () => sceneRef && sceneRef.upgradeBase()));
+}
+
+const btnWave = el('btn-wave'), btnSpeed = el('btn-speed'), btnSkip = el('btn-skip'), btnRestart = el('btn-restart');
+btnWave.addEventListener('click', () => sceneRef && sceneRef.startWave());
+btnSpeed.addEventListener('click', () => {
+  const S = sceneRef; if (!S) return;
+  const idx = SPEEDS.indexOf(S.speed);
+  S.speed = SPEEDS[(idx+1) % SPEEDS.length];
+  btnSpeed.textContent = S.speed===1 ? '⏩ Fast: Off' : `⏩ Fast: ${S.speed}x`;
+  btnSpeed.classList.toggle('active', S.speed>1);
+});
+btnSkip.addEventListener('click', () => sceneRef && sceneRef.skipWave());
+btnRestart.addEventListener('click', () => {
+  btnSpeed.textContent = '⏩ Fast: Off'; btnSpeed.classList.remove('active');
+  sceneRef.scene.restart();
+});
+
+/* zoom controls */
+const ZOOMS = [.6,.8,1,1.25,1.5];
+function setZoom(z){
+  const S = sceneRef; if (!S) return;
+  S.zoom = z;
+  S.cameras.main.setZoom(z);
+  // keep the map roughly centered when zoomed
+  S.cameras.main.centerOn(W/2, H/2);
+  el('zoomLabel').textContent = Math.round(z*100)+'%';
+  // grow canvas box so zoom isn't clipped: FIT mode handles width; expand height
+  const container = el('game-container');
+  container.style.height = (H*z) + 'px';
+  game.scale.resize(W, H);
+}
+el('zoom-in').addEventListener('click', () => {
+  const S = sceneRef; if (!S) return;
+  const idx = ZOOMS.findIndex(z=>Math.abs(z-S.zoom)<.01);
+  setZoom(ZOOMS[Math.min(idx+1, ZOOMS.length-1)]);
+});
+el('zoom-out').addEventListener('click', () => {
+  const S = sceneRef; if (!S) return;
+  const idx = ZOOMS.findIndex(z=>Math.abs(z-S.zoom)<.01);
+  setZoom(ZOOMS[Math.max(idx-1, 0)]);
+});
+
+function updateHUD(){
+  const S = sceneRef; if (!S) return;
+  el('gold').textContent = S.gold;
+  el('baseHp').textContent = Math.max(0, Math.round(S.baseHp));
+  el('wave').textContent = `${S.wave} / ${MAX_WAVE}`;
+  el('foes').textContent = S.enemies.length + S.spawnQueue.length;
+  const busy = S.phase==='wave';
+  btnWave.disabled = busy || S.phase==='won' || S.phase==='lost';
+  btnWave.textContent = S.phase==='won' ? '🏆 Seas Defended' : S.phase==='lost' ? '💀 Shipwrecked'
+    : busy ? `🌊 Wave ${S.wave} rages…` : `▶ Start Wave ${S.wave+1}`;
+  btnSkip.disabled = S.phase!=='wave' && !(S.phase==='idle' && S.wave>0);
+}
+
+/* re-render cards periodically so gold-dependent buttons stay fresh */
+setInterval(() => { if (sceneRef && sceneRef.towers) renderCards(); }, 1200);
+</script>
+</body>
+</html>
